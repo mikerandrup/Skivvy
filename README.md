@@ -113,8 +113,8 @@ Requires Xcode 27 on an Apple Silicon Mac. Everything works from the
 terminal; you never need to open the Xcode GUI.
 
 ```
-git clone <this repo>
-cd Skivvy-macOSWindowSizer
+git clone https://github.com/mikerandrup/Skivvy.git
+cd Skivvy
 Shell/build.sh Release
 ```
 
