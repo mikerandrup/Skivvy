@@ -5,6 +5,8 @@ public enum WindowMover {
     public struct Outcome: Sendable {
         public let requested: CGRect
         public let achieved: CGRect?
+        /// Results of the size, position, size writes in order.
+        public let axErrors: [AXError]
         public var matched: Bool {
             guard let achieved else { return false }
             return Geometry.nearlyEqual(
@@ -40,12 +42,13 @@ public enum WindowMover {
 
         let el = window.element
         let resizable = window.isResizable
+        var axErrors: [AXError] = []
         if resizable {
-            el.set(AXAttribute.size, size: target.size)
+            axErrors.append(el.set(AXAttribute.size, size: target.size))
         }
-        el.set(AXAttribute.position, point: target.origin)
+        axErrors.append(el.set(AXAttribute.position, point: target.origin))
         if resizable {
-            el.set(AXAttribute.size, size: target.size)
+            axErrors.append(el.set(AXAttribute.size, size: target.size))
         }
 
         var achieved = window.frame
@@ -65,6 +68,8 @@ public enum WindowMover {
             el.set(AXAttribute.position, point: origin)
             achieved = window.frame
         }
-        return Outcome(requested: target, achieved: achieved)
+        return Outcome(
+            requested: target, achieved: achieved, axErrors: axErrors
+        )
     }
 }

@@ -21,6 +21,12 @@ public struct AXElement: @unchecked Sendable {
         AXUIElementSetMessagingTimeout(raw, seconds)
     }
 
+    /// True when both refer to the same UI element. AXUIElement
+    /// supports CFEqual, so no private window id is needed.
+    public func isSame(as other: AXElement) -> Bool {
+        CFEqual(raw, other.raw)
+    }
+
     public func value(_ attribute: String) -> CFTypeRef? {
         var out: CFTypeRef?
         let err = AXUIElementCopyAttributeValue(

@@ -76,8 +76,10 @@ Run scripts from the repo root. They resolve their own paths.
   `AXEnhancedUserInterface` suppression.
 - Launch at Login is a user toggle, never automatic. Registering from
   a DerivedData build corrupts the login items database.
-- Repeat-press cycling compares the window to the target frame within
-  `Resolver.tolerance` (4 points).
+- Repeat-press cycling uses the last `Placement` record first (same
+  window, same layout, window still within `Resolver.tolerance` of the
+  achieved or requested frame), then the ideal-frame comparison. The
+  record is what lets a clamped window keep cycling.
 
 ## Gotchas
 

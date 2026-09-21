@@ -74,7 +74,7 @@ struct AccessibilityIntegrationTests {
         let first = try #require(
             Resolver.resolve(.left, window: frame, screens: screens)
         )
-        _ = WindowMover.apply(
+        let outcome = WindowMover.apply(
             Geometry.flip(first.frame, primaryHeight: primaryHeight),
             to: window
         )
@@ -85,6 +85,30 @@ struct AccessibilityIntegrationTests {
             Resolver.resolve(.left, window: frame, screens: screens)
         )
         #expect(second.screen != first.screen)
+
+        // The same press, decided by the placement record the
+        // app keeps, must also walk on even if the frame was
+        // clamped.
+        let record = Placement(
+            window: window.element,
+            layout: .left,
+            screenID: first.screen.id,
+            requested: first.frame,
+            achieved: outcome.achieved.map {
+                Geometry.flip($0, primaryHeight: primaryHeight)
+            }
+        )
+        let byRecord = try #require(
+            Resolver.resolve(
+                .left,
+                window: frame,
+                element: window.element,
+                screens: screens,
+                previous: record
+            )
+        )
+        #expect(byRecord.decision == .cycleRecord)
+        #expect(byRecord.screen != first.screen)
     }
 }
 

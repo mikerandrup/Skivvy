@@ -4,6 +4,7 @@ import os
 
 final class WindowController {
     private let permission: AccessibilityPermission
+    private var lastPlacement: Placement?
     private let logger = Logger(
         subsystem: "com.metroplexweb.Skivvy", category: "window"
     )
@@ -35,7 +36,11 @@ final class WindowController {
         let screens = ScreenInfo.current()
         let current = Geometry.flip(axFrame, primaryHeight: primaryHeight)
         guard let target = Resolver.resolve(
-            layout, window: current, screens: screens
+            layout,
+            window: current,
+            element: window.element,
+            screens: screens,
+            previous: lastPlacement
         ) else {
             logger.info("No screens")
             return
@@ -55,8 +60,27 @@ final class WindowController {
             to: window,
             suppressEnhancedUI: suppress
         )
-        logger.info(
-            "\(layout.name, privacy: .public) on screen \(target.screen.id) matched=\(outcome.matched)"
+        let achieved = outcome.achieved.map {
+            Geometry.flip($0, primaryHeight: primaryHeight)
+        }
+        lastPlacement = Placement(
+            window: window.element,
+            layout: layout,
+            screenID: target.screen.id,
+            requested: target.frame,
+            achieved: achieved
         )
+        let bundleID = app.bundleIdentifier ?? "?"
+        let errors = outcome.axErrors
+            .map { String($0.rawValue) }
+            .joined(separator: ",")
+        logger.info(
+            "\(layout.name, privacy: .public) \(bundleID, privacy: .public) decision=\(target.decision.rawValue, privacy: .public) screen=\(target.screen.id) requested=\(Self.describe(target.frame), privacy: .public) achieved=\(Self.describe(achieved), privacy: .public) matched=\(outcome.matched) axErrors=\(errors, privacy: .public)"
+        )
+    }
+
+    static func describe(_ rect: CGRect?) -> String {
+        guard let rect else { return "none" }
+        return "\(Int(rect.minX)),\(Int(rect.minY)) \(Int(rect.width))x\(Int(rect.height))"
     }
 }
