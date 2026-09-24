@@ -30,6 +30,25 @@ Shell/install.sh                # Release build to /Applications, atomic swap, l
 
 Run scripts from the repo root. They resolve their own paths.
 
+## Deploy
+
+"Deploy" means, in order:
+
+1. `Shell/install.sh`.
+2. Delete every `Skivvy.app` Xcode left in DerivedData (Debug
+   and Release) and unregister each first, so Spotlight and
+   Launch Services never offer a stale copy:
+
+```
+LSR=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+for a in ~/Library/Developer/Xcode/DerivedData/Skivvy-*/Build/Products/*/Skivvy.app; do
+  $LSR -u "$a"; rm -rf "$a"
+done
+```
+
+3. Verify `$LSR -dump | grep "^path:.*Skivvy.app"` lists only
+   `/Applications/Skivvy.app`.
+
 ## Structure
 
 - `Skivvy/Skivvy.xcodeproj` uses an Xcode 16+ synchronized folder
