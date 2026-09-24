@@ -27,6 +27,12 @@ public struct AXElement: @unchecked Sendable {
         CFEqual(raw, other.raw)
     }
 
+    public var pid: pid_t? {
+        var pid: pid_t = 0
+        let err = AXUIElementGetPid(raw, &pid)
+        return err == .success ? pid : nil
+    }
+
     public func value(_ attribute: String) -> CFTypeRef? {
         var out: CFTypeRef?
         let err = AXUIElementCopyAttributeValue(
@@ -109,6 +115,8 @@ public struct AXElement: @unchecked Sendable {
 }
 
 public enum AXAttribute {
+    public static let focusedApplication =
+        kAXFocusedApplicationAttribute
     public static let focusedWindow = kAXFocusedWindowAttribute
     public static let mainWindow = kAXMainWindowAttribute
     public static let windows = kAXWindowsAttribute

@@ -19,19 +19,18 @@ final class WindowController {
             permission.requestIfNeeded()
             return
         }
-        guard let app = NSWorkspace.shared.frontmostApplication
+        guard let front = NSWorkspace.shared.frontmostApplication
         else {
             logger.info("No frontmost application")
             return
         }
-        let axApp = AXElement.application(pid: app.processIdentifier)
-        axApp.setMessagingTimeout(1)
-        guard let window = AXWindow.focused(in: axApp),
-              let axFrame = window.frame
+        guard let found = target(front: front),
+              let axFrame = found.window.frame
         else {
-            logger.info("No usable window in \(app.localizedName ?? "app", privacy: .public)")
+            logger.info("No usable window in \(front.localizedName ?? "app", privacy: .public)")
             return
         }
+        let (app, window) = (found.app, found.window)
         let primaryHeight = ScreenInfo.primaryHeight
         let screens = ScreenInfo.current()
         let current = Geometry.flip(axFrame, primaryHeight: primaryHeight)
@@ -77,6 +76,40 @@ final class WindowController {
         logger.info(
             "\(layout.name, privacy: .public) \(bundleID, privacy: .public) decision=\(target.decision.rawValue, privacy: .public) screen=\(target.screen.id) requested=\(Self.describe(target.frame), privacy: .public) achieved=\(Self.describe(achieved), privacy: .public) matched=\(outcome.matched) axErrors=\(errors, privacy: .public)"
         )
+    }
+
+    /// The frontmost app's window. A Chrome web app shim can stay
+    /// frontmost while owning no windows, so when the frontmost
+    /// app has none, fall back to the app Accessibility reports
+    /// as focused.
+    private func target(
+        front: NSRunningApplication
+    ) -> (app: NSRunningApplication, window: AXWindow)? {
+        if let window = Self.window(of: front) {
+            return (front, window)
+        }
+        let system = AXElement.systemWide
+        guard let focused = system.element(
+                AXAttribute.focusedApplication
+              ),
+              let pid = focused.pid,
+              pid != front.processIdentifier,
+              let app = NSRunningApplication(processIdentifier: pid),
+              let window = Self.window(of: app)
+        else { return nil }
+        logger.info("No usable window in \(front.localizedName ?? "app", privacy: .public); using focused \(app.localizedName ?? "app", privacy: .public)")
+        return (app, window)
+    }
+
+    private static func window(
+        of app: NSRunningApplication
+    ) -> AXWindow? {
+        let axApp = AXElement.application(pid: app.processIdentifier)
+        axApp.setMessagingTimeout(1)
+        guard let window = AXWindow.focused(in: axApp),
+              window.frame != nil
+        else { return nil }
+        return window
     }
 
     static func describe(_ rect: CGRect?) -> String {
