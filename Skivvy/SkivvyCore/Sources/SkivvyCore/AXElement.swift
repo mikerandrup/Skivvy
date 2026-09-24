@@ -41,6 +41,14 @@ public struct AXElement: @unchecked Sendable {
         return err == .success ? out : nil
     }
 
+    /// The raw result of reading an attribute, for diagnostics.
+    public func error(reading attribute: String) -> AXError {
+        var out: CFTypeRef?
+        return AXUIElementCopyAttributeValue(
+            raw, attribute as CFString, &out
+        )
+    }
+
     public func element(_ attribute: String) -> AXElement? {
         guard let v = value(attribute),
               CFGetTypeID(v) == AXUIElementGetTypeID()

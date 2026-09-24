@@ -27,7 +27,7 @@ final class WindowController {
         guard let found = target(front: front),
               let axFrame = found.window.frame
         else {
-            logger.info("No usable window in \(front.localizedName ?? "app", privacy: .public)")
+            logNoWindow(front: front)
             return
         }
         let (app, window) = (found.app, found.window)
@@ -110,6 +110,41 @@ final class WindowController {
               window.frame != nil
         else { return nil }
         return window
+    }
+
+    /// Logs the raw AXError for each window lookup and the state
+    /// of whatever window was found, so a failure names its cause.
+    private func logNoWindow(front: NSRunningApplication) {
+        let axApp = AXElement.application(pid: front.processIdentifier)
+        axApp.setMessagingTimeout(1)
+        let lookups = [
+            AXAttribute.focusedWindow,
+            AXAttribute.mainWindow,
+            AXAttribute.windows,
+        ].map { "\($0)=\(axApp.error(reading: $0).rawValue)" }
+        let windowCount = axApp.elements(AXAttribute.windows).count
+        let system = AXElement.systemWide
+        let systemFocus = system.error(
+            reading: AXAttribute.focusedApplication
+        ).rawValue
+        let systemPid = system.element(
+            AXAttribute.focusedApplication
+        )?.pid.map(String.init) ?? "none"
+        var state = "none"
+        if let w = axApp.element(AXAttribute.focusedWindow)
+            ?? axApp.element(AXAttribute.mainWindow) {
+            let min = w.bool(AXAttribute.minimized)
+                .map(String.init) ?? "?"
+            let full = w.bool(AXAttribute.fullScreen)
+                .map(String.init) ?? "?"
+            let sub = w.string(AXAttribute.subrole) ?? "?"
+            let pos = w.error(reading: AXAttribute.position).rawValue
+            let size = w.error(reading: AXAttribute.size).rawValue
+            state = "subrole=\(sub) minimized=\(min) fullScreen=\(full) positionErr=\(pos) sizeErr=\(size)"
+        }
+        logger.info(
+            "No usable window in \(front.localizedName ?? "app", privacy: .public) pid=\(front.processIdentifier) trusted=\(self.permission.isTrusted) \(lookups.joined(separator: " "), privacy: .public) windows=\(windowCount) systemFocusedAppErr=\(systemFocus) systemFocusedPid=\(systemPid, privacy: .public) window=[\(state, privacy: .public)]"
+        )
     }
 
     static func describe(_ rect: CGRect?) -> String {
